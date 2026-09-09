@@ -1,0 +1,30 @@
+services:
+
+  # CONTENEDOR 1: el pipeline. Entrena y se apaga.
+  pipeline:
+    build: .
+    container_name: chinook_pipeline
+    env_file: .env
+    command: python TrainModel.py
+    volumes:
+      - modelo:/app/modelo
+    restart: "no"
+
+  # CONTENEDOR 2: la API. Arranca cuando el pipeline termino bien.
+  api:
+    build: .
+    container_name: chinook_api
+    env_file: .env
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - modelo:/app/modelo
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+# Volumen compartido: aqui el pipeline deja el .pkl y la API lo recoge.
+volumes:
+  modelo:
